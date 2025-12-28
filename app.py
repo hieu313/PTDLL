@@ -1,26 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-==========================================
-ỨNG DỤNG WEB STREAMLIT - DỰ ĐOÁN MỨC ĐỘ NGHIÊM TRỌNG TAI NẠN GIAO THÔNG
-==========================================
-
-Mô tả:
-    Ứng dụng web cho phép người dùng:
-    1. Nhập thông tin về tình huống giao thông
-    2. Dự đoán mức độ nghiêm trọng nếu xảy ra tai nạn
-    3. Xem xác suất cho từng mức độ
-
-Cách chạy:
-    streamlit run app.py
-
-Yêu cầu:
-    - Python 3.7+
-    - streamlit, pandas, numpy, xgboost, joblib, plotly
-
-Tác giả: PTDLL Team
-==========================================
-"""
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -29,12 +6,9 @@ import plotly.graph_objects as go
 from pathlib import Path
 import os
 
-# Import module model từ src
-# Nếu không tìm thấy, sẽ định nghĩa fallback functions
 try:
     from src.model import load_model, get_severity_label
 except ImportError:
-    # Fallback nếu không import được
     import joblib
 
     def load_model(filepath):
@@ -49,9 +23,6 @@ except ImportError:
         return labels.get(prediction, "Không xác định")
 
 
-# ============================================================
-# CẤU HÌNH TRANG WEB
-# ============================================================
 st.set_page_config(
     page_title="Dự đoán tai nạn giao thông",
     page_icon="🚗",
@@ -59,12 +30,8 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ============================================================
-# CSS TÙY CHỈNH
-# ============================================================
 st.markdown("""
 <style>
-    /* Tùy chỉnh header */
     .main-header {
         font-size: 2.5rem;
         font-weight: bold;
@@ -73,7 +40,6 @@ st.markdown("""
         margin-bottom: 1rem;
     }
 
-    /* Tùy chỉnh subheader */
     .sub-header {
         font-size: 1.2rem;
         color: #666;
@@ -81,7 +47,6 @@ st.markdown("""
         margin-bottom: 2rem;
     }
 
-    /* Card style cho kết quả */
     .result-card {
         padding: 1.5rem;
         border-radius: 10px;
@@ -103,7 +68,6 @@ st.markdown("""
         border: 2px solid #dc3545;
     }
 
-    /* Metric styling */
     .metric-container {
         text-align: center;
         padding: 1rem;
@@ -126,11 +90,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# ============================================================
-# ĐỊNH NGHĨA CÁC BIẾN MAPPING CHO FORM INPUT
-# ============================================================
-
-# Mapping cho điều kiện ánh sáng (lum)
 LIGHT_CONDITIONS = {
     "Ban ngày": 1,
     "Hoàng hôn hoặc bình minh": 2,
@@ -139,7 +98,6 @@ LIGHT_CONDITIONS = {
     "Ban đêm không có đèn đường": 5
 }
 
-# Mapping cho điều kiện thời tiết (atm)
 WEATHER_CONDITIONS = {
     "Bình thường": 1,
     "Mưa nhẹ": 2,
@@ -151,7 +109,6 @@ WEATHER_CONDITIONS = {
     "Mây": 8
 }
 
-# Mapping cho loại phương tiện (catv)
 VEHICLE_TYPES = {
     "Xe đạp": 1,
     "Xe máy < 50cc": 2,
@@ -165,7 +122,6 @@ VEHICLE_TYPES = {
     "Người đi bộ": 99
 }
 
-# Mapping cho tình trạng mặt đường (surf)
 ROAD_SURFACE = {
     "Khô ráo": 1,
     "Ướt": 2,
@@ -177,7 +133,6 @@ ROAD_SURFACE = {
     "Có dầu mỡ": 8
 }
 
-# Mapping cho loại va chạm (col)
 COLLISION_TYPE = {
     "Hai xe đối đầu": 1,
     "Hai xe cùng chiều": 2,
@@ -189,16 +144,9 @@ COLLISION_TYPE = {
 }
 
 
-# ============================================================
-# HÀM TIỆN ÍCH
-# ============================================================
-
 @st.cache_resource
 def load_xgboost_model():
-    """
-    Tải mô hình XGBoost đã huấn luyện.
-    Sử dụng cache để không phải tải lại mỗi lần refresh.
-    """
+
     model_paths = [
         'models/model_xgboost.pkl',
         'model_xgboost.pkl',
@@ -217,26 +165,14 @@ def load_xgboost_model():
 
 
 def create_probability_chart(probabilities, class_names):
-    """
-    Tạo biểu đồ thanh hiển thị xác suất cho mỗi lớp.
 
-    Tham số:
-        probabilities: Mảng xác suất cho mỗi lớp
-        class_names: Danh sách tên các lớp
-
-    Trả về:
-        Plotly figure object
-    """
-    # Tạo DataFrame cho biểu đồ
     df = pd.DataFrame({
         'Mức độ': class_names,
-        'Xác suất': probabilities * 100  # Chuyển sang phần trăm
+        'Xác suất': probabilities * 100
     })
 
-    # Định nghĩa màu sắc cho mỗi lớp
-    colors = ['#28a745', '#ffc107', '#dc3545']  # Xanh, Vàng, Đỏ
+    colors = ['#28a745', '#ffc107', '#dc3545']
 
-    # Tạo biểu đồ thanh ngang
     fig = go.Figure(go.Bar(
         y=df['Mức độ'],
         x=df['Xác suất'],
@@ -259,9 +195,7 @@ def create_probability_chart(probabilities, class_names):
 
 
 def get_result_style(prediction):
-    """
-    Trả về class CSS phù hợp với kết quả dự đoán.
-    """
+
     if prediction == 0:
         return "result-safe"
     elif prediction == 1:
@@ -271,9 +205,7 @@ def get_result_style(prediction):
 
 
 def get_result_emoji(prediction):
-    """
-    Trả về emoji phù hợp với kết quả dự đoán.
-    """
+
     if prediction == 0:
         return "✅"
     elif prediction == 1:
@@ -283,9 +215,7 @@ def get_result_emoji(prediction):
 
 
 def get_safety_tips(prediction):
-    """
-    Trả về các lời khuyên an toàn dựa trên mức độ dự đoán.
-    """
+
     tips = {
         0: [
             "Tiếp tục duy trì các biện pháp an toàn",
@@ -312,24 +242,15 @@ def get_safety_tips(prediction):
     return tips.get(prediction, [])
 
 
-# ============================================================
-# GIAO DIỆN CHÍNH
-# ============================================================
-
 def main():
-    """
-    Hàm chính xây dựng giao diện Streamlit.
-    """
-    # Header
+
     st.markdown('<h1 class="main-header">🚗 Dự đoán mức độ nghiêm trọng tai nạn giao thông</h1>',
                 unsafe_allow_html=True)
     st.markdown('<p class="sub-header">Nhập thông tin tình huống giao thông để dự đoán mức độ nghiêm trọng nếu xảy ra tai nạn</p>',
                 unsafe_allow_html=True)
 
-    # Tải mô hình
     model, model_path = load_xgboost_model()
 
-    # Sidebar - Thông tin mô hình
     with st.sidebar:
         st.header("ℹ️ Thông tin")
 
@@ -363,22 +284,18 @@ def main():
         3. Xem kết quả và lời khuyên an toàn
         """)
 
-    # Main content
     if model is None:
         st.error("⚠️ Không thể thực hiện dự đoán vì chưa có mô hình!")
         st.info("Vui lòng huấn luyện mô hình trước bằng cách chạy `python main_new.py`")
         return
 
-    # Form nhập liệu
     st.header("📝 Nhập thông tin tình huống")
 
-    # Chia thành 3 cột
     col1, col2, col3 = st.columns(3)
 
     with col1:
         st.subheader("👤 Thông tin người lái")
 
-        # Tuổi
         age = st.slider(
             "Tuổi người lái",
             min_value=16,
@@ -387,25 +304,22 @@ def main():
             help="Độ tuổi của người điều khiển phương tiện"
         )
 
-        # Giới tính
         gender = st.selectbox(
             "Giới tính",
             options=["Nam", "Nữ"],
             help="Giới tính của người lái"
         )
 
-        # Loại phương tiện
         vehicle_type = st.selectbox(
             "Loại phương tiện",
             options=list(VEHICLE_TYPES.keys()),
-            index=4,  # Mặc định: Ô tô con
+            index=4,
             help="Loại phương tiện đang sử dụng"
         )
 
     with col2:
         st.subheader("🌤️ Điều kiện môi trường")
 
-        # Giờ trong ngày
         hour = st.slider(
             "Giờ (0-24)",
             min_value=0,
@@ -414,14 +328,12 @@ def main():
             help="Thời điểm trong ngày (giờ)"
         )
 
-        # Điều kiện ánh sáng
         light_condition = st.selectbox(
             "Điều kiện ánh sáng",
             options=list(LIGHT_CONDITIONS.keys()),
             help="Điều kiện ánh sáng tại thời điểm đó"
         )
 
-        # Thời tiết
         weather = st.selectbox(
             "Thời tiết",
             options=list(WEATHER_CONDITIONS.keys()),
@@ -431,21 +343,18 @@ def main():
     with col3:
         st.subheader("🛣️ Điều kiện đường")
 
-        # Tình trạng mặt đường
         road_surface = st.selectbox(
             "Tình trạng mặt đường",
             options=list(ROAD_SURFACE.keys()),
             help="Tình trạng mặt đường tại thời điểm đó"
         )
 
-        # Loại va chạm
         collision_type = st.selectbox(
             "Loại va chạm (dự kiến)",
             options=list(COLLISION_TYPE.keys()),
             help="Loại va chạm có thể xảy ra"
         )
 
-        # Vị trí (trong/ngoài đô thị)
         urban_area = st.checkbox(
             "Trong khu vực đô thị",
             value=True,
@@ -454,7 +363,6 @@ def main():
 
     st.divider()
 
-    # Nút dự đoán
     predict_button = st.button(
         "🔮 Dự đoán mức độ nghiêm trọng",
         type="primary",
@@ -463,9 +371,6 @@ def main():
 
     if predict_button:
         with st.spinner("Đang phân tích..."):
-            # Tạo dictionary features
-            # LƯU Ý: Tên các features phải khớp với thứ tự khi huấn luyện
-            # Đây là demo, trong thực tế cần có danh sách features chính xác
             features = {
                 'age': age,
                 'hour': hour,
@@ -479,34 +384,25 @@ def main():
             }
 
             try:
-                # Tạo DataFrame với đúng format
-                # Cần xử lý các features còn thiếu với giá trị mặc định
                 X = pd.DataFrame([features])
 
-                # Thêm các cột còn thiếu với giá trị 0 (hoặc giá trị phổ biến nhất)
-                # Lấy danh sách features từ mô hình
                 if hasattr(model, 'feature_names_in_'):
                     expected_features = model.feature_names_in_
                 else:
-                    # Fallback: sử dụng số features
                     expected_features = [f'feature_{i}' for i in range(model.n_features_in_)]
 
                 for feature in expected_features:
                     if feature not in X.columns:
-                        X[feature] = 0  # Giá trị mặc định
+                        X[feature] = 0
 
-                # Sắp xếp theo thứ tự features của mô hình
                 X = X.reindex(columns=expected_features, fill_value=0)
 
-                # Dự đoán
                 prediction = model.predict(X)[0]
                 probabilities = model.predict_proba(X)[0]
 
-                # Hiển thị kết quả
                 st.divider()
                 st.header("📊 Kết quả dự đoán")
 
-                # Kết quả chính
                 result_style = get_result_style(prediction)
                 result_emoji = get_result_emoji(prediction)
                 severity_label = get_severity_label(prediction)
@@ -522,12 +418,10 @@ def main():
                 </div>
                 """, unsafe_allow_html=True)
 
-                # Biểu đồ xác suất
                 class_names = ['Không thương', 'Nhẹ', 'Nghiêm trọng']
                 fig = create_probability_chart(probabilities, class_names)
                 st.plotly_chart(fig, use_container_width=True)
 
-                # Lời khuyên an toàn
                 st.subheader("💡 Lời khuyên an toàn")
                 tips = get_safety_tips(prediction)
                 for tip in tips:
@@ -537,7 +431,6 @@ def main():
                 st.error(f"❌ Lỗi khi dự đoán: {e}")
                 st.info("Mô hình có thể yêu cầu các features khác. Hãy kiểm tra lại.")
 
-    # Footer
     st.divider()
     st.markdown("""
     <div style="text-align: center; color: #666; font-size: 0.9rem;">
@@ -548,6 +441,5 @@ def main():
     """, unsafe_allow_html=True)
 
 
-# Chạy ứng dụng
 if __name__ == '__main__':
     main()
